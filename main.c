@@ -3,7 +3,6 @@
 #include <direct.h>
 #include <time.h>
 #include <stdlib.h>
-#include "solveur.h"
 #include "game.h"
 
 

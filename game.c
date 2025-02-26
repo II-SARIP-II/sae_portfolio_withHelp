@@ -199,6 +199,7 @@ void initGame(int difficulty) {
     GenerateMaze(difficulty);
     setCarac(0, difficulty);
     setCarac(1, difficulty);
+    solveMaze(difficulty);
 }
 
 //    Stack sta = new_stack();
@@ -218,8 +219,6 @@ void initGame(int difficulty) {
 /*-----------------------------------------SOLVEUR with help-----------------------------------------------*/
 
 /*----------------------------------------------------------------------------------------*/
-#define MAX_QUEUE_SIZE (WIDTH * HEIGHT)
-
 typedef struct {
     Point point;
     int prevIndex;
@@ -228,12 +227,25 @@ typedef struct {
 Point directions[] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
 void solveMaze(int difficulty) {
+    // Remplacez WIDTH et HEIGHT par la variable 'difficulty'
+    int WIDTH = difficulty;
+    int HEIGHT = difficulty;
+
     terrain *map = returnMap();
     int startX = getCaracX(difficulty);
     int startY = getCaracY(difficulty);
 
-    Node queue[MAX_QUEUE_SIZE];
-    int visited[HEIGHT][WIDTH] = {0};
+    // Déclarez un tableau de taille dynamique en fonction de la difficulté
+    Node queue[WIDTH * HEIGHT];  // Vous devez également adapter cette taille si nécessaire.
+    int visited[HEIGHT][WIDTH];  // Déclaration du tableau visited en fonction des dimensions.
+
+    // Initialisation de visited
+    for (int i = 0; i < HEIGHT; i++) {
+        for (int j = 0; j < WIDTH; j++) {
+            visited[i][j] = 0;
+        }
+    }
+
     int front = 0, rear = 0;
 
     queue[rear++] = (Node){{startX, startY}, -1};
@@ -270,7 +282,7 @@ void solveMaze(int difficulty) {
     }
 
     int currentIndex = rear - 1;
-    char path[MAX_QUEUE_SIZE];
+    char path[WIDTH * HEIGHT];
     int pathLength = 0;
 
     while (currentIndex != -1) {
@@ -294,6 +306,7 @@ void solveMaze(int difficulty) {
     }
     printf("\nMaze solved!\n");
 }
+
 
 
 
