@@ -5,7 +5,7 @@
 #include <SDL3/SDL.h>
 
 terrain map;
-Point Exposed[WIDTH * HEIGHT];
+Point *Exposed;
 int exposedCount = 0;
 int CountToExit = 0;
 int ExitPositionWidth;
@@ -20,20 +20,20 @@ Point removeExposed(int index) {
     return p;
 }
 
-bool Decide(Point p) {
+bool Decide(Point p, int difficulty) {
     int emptyCount = 0;
     if (p.x > 0 && map.map[p.x - 1][p.y] == EMPTY) emptyCount++;
-    if (p.x < HEIGHT - 1 && map.map[p.x + 1][p.y] == EMPTY) emptyCount++;
+    if (p.x < difficulty - 1 && map.map[p.x + 1][p.y] == EMPTY) emptyCount++;
     if (p.y > 0 && map.map[p.x][p.y - 1] == EMPTY) emptyCount++;
-    if (p.y < WIDTH - 1 && map.map[p.x][p.y + 1] == EMPTY) emptyCount++;
+    if (p.y < difficulty - 1 && map.map[p.x][p.y + 1] == EMPTY) emptyCount++;
     return emptyCount == 1;
 }
 
-void Dig(Point p) {
+void Dig(Point p, int difficulty) {
     map.map[p.x][p.y] = EMPTY;
     Point neighbors[] = {{p.x - 1, p.y}, {p.x + 1, p.y}, {p.x, p.y - 1}, {p.x, p.y + 1}};
     for (int i = 0; i < 4; i++) {
-        if (neighbors[i].x >= 0 && neighbors[i].x < HEIGHT && neighbors[i].y >= 0 && neighbors[i].y < WIDTH) {
+        if (neighbors[i].x >= 0 && neighbors[i].x < difficulty && neighbors[i].y >= 0 && neighbors[i].y < difficulty) {
             if (map.map[neighbors[i].x][neighbors[i].y] == WALL) {
                 addExposed(neighbors[i]);
             }
@@ -41,13 +41,35 @@ void Dig(Point p) {
     }
 }
 
-void GenerateMaze() {
+void GenerateMaze(int difficulty) {
     srand(time(NULL));
-    for (int i = 0; i < HEIGHT; i++)
-        for (int j = 0; j < WIDTH; j++)
-            map.map[i][j] = WALL;
 
-    int entryPos = rand() % (WIDTH - 2) + 1;
+    // Allocation dynamique
+    map.map = malloc(difficulty * sizeof(*map.map));
+    if (!map.map) {
+        perror("Erreur d'allocation pour map");
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 0; i < difficulty; i++) {
+        map.map[i] = malloc(difficulty * sizeof(*map.map[i]));
+        if (!map.map[i]) {
+            perror("Erreur d'allocation pour map[i]");
+            exit(EXIT_FAILURE);
+        }
+        for (int j = 0; j < difficulty; j++) {
+            map.map[i][j] = WALL;
+        }
+    }
+
+    // Allocation pour Exposed
+    Exposed = malloc(difficulty * difficulty * sizeof(Point));
+    if (!Exposed) {
+        perror("Erreur d'allocation pour Exposed");
+        exit(EXIT_FAILURE);
+    }
+
+    int entryPos = rand() % (difficulty - 2) + 1;
     map.map[0][entryPos] = EMPTY;
     Point entryPoint = {1, entryPos};
     addExposed(entryPoint);
@@ -55,15 +77,15 @@ void GenerateMaze() {
     while (exposedCount > 0) {
         int randIndex = rand() % exposedCount;
         Point point = removeExposed(randIndex);
-        if (Decide(point)) {
-            Dig(point);
+        if (Decide(point, difficulty)) {
+            Dig(point, difficulty);
         } else {
             map.map[point.x][point.y] = WALL;
         }
 
-        if (point.x == HEIGHT - 2) {
+        if (point.x == difficulty - 2) {
             CountToExit++;
-            if (CountToExit == WIDTH / 2 - 1) {
+            if (CountToExit == difficulty / 2 - 1) {
                 map.map[point.x + 1][point.y] = EMPTY;
                 ExitPositionWidth = point.y;
             }
@@ -71,16 +93,25 @@ void GenerateMaze() {
     }
 }
 
+void freeMap(int difficulty) {
+    for (int i = 0; i < difficulty; i++) {
+        free(map.map[i]);
+    }
+    free(map.map);
+    free(Exposed);
+}
+
+
 terrain* returnMap(void) {
     return &map;
 }
 
-void setCarac(int type) {
+void setCarac(int type, int difficulty) {
     int y, x;
     do {
-        x = rand() % (WIDTH - 2) + 1;
-        y = rand() % (HEIGHT - 2) + 1;
-    } while (map.map[y][x] != EMPTY || x <= 0 || y <= 0 || x >= WIDTH - 1 || y >= HEIGHT - 1);
+        x = rand() % (difficulty - 2) + 1;
+        y = rand() % (difficulty - 2) + 1;
+    } while (map.map[y][x] != EMPTY);
 
     if (type == 0)
         map.map[y][x] = MAINCARACTERE;
@@ -88,23 +119,23 @@ void setCarac(int type) {
         map.map[y][x] = FINISH;
 }
 
-int getCaracX() {
-    for (int i = 0; i < HEIGHT; ++i)
-        for (int j = 0; j < WIDTH; ++j)
+int getCaracX(int difficulty) {
+    for (int i = 0; i < difficulty; ++i)
+        for (int j = 0; j < difficulty; ++j)
             if (map.map[i][j] == MAINCARACTERE)
                 return j;
     return -1;
 }
 
-int getCaracY() {
-    for (int i = 0; i < HEIGHT; ++i)
-        for (int j = 0; j < WIDTH; ++j)
+int getCaracY(int difficulty) {
+    for (int i = 0; i < difficulty; ++i)
+        for (int j = 0; j < difficulty; ++j)
             if (map.map[i][j] == MAINCARACTERE)
                 return i;
     return -1;
 }
 
-int moveCarac(int x, int y, char action) {
+int moveCarac(int x, int y, char action, int difficulty) {
     int newY = y, newX = x;
     switch (action) {
         case 'z': newY--; break;
@@ -112,9 +143,8 @@ int moveCarac(int x, int y, char action) {
         case 'q': newX--; break;
         case 'd': newX++; break;
     }
-    if (newY >= 0 && newY < HEIGHT && newX >= 0 && newX < WIDTH &&
-        (map.map[newY][newX] == EMPTY || map.map[newY][newX] == FINISH)){
-        printf("newY: %d, newX: %d, value: %d\n", newY, newX, map.map[newY][newX]);
+    if (newY >= 0 && newY < difficulty && newX >= 0 && newX < difficulty &&
+        (map.map[newY][newX] == EMPTY || map.map[newY][newX] == FINISH)) {
         map.map[y][x] = EMPTY;
         if (map.map[newY][newX] == FINISH) {
             printf("YOU WIN!\n");
@@ -124,11 +154,19 @@ int moveCarac(int x, int y, char action) {
     }
     return 0;
 }
+void printMap(SDL_Renderer *renderer, int difficulty) {
+    float cellWidth = (float)WINDOW_WIDTH / difficulty;
+    float cellHeight = (float)WINDOW_HEIGHT / difficulty;
 
-void printMap(SDL_Renderer *renderer) {
-    for (int x = 0; x < WIDTH; x++) {
-        for (int y = 0; y < HEIGHT; y++) {
-            SDL_FRect rect = { x * WINDOW_WIDTH / WIDTH, y * WINDOW_HEIGHT / HEIGHT, WINDOW_WIDTH / WIDTH, WINDOW_HEIGHT / HEIGHT };
+    for (int x = 0; x < difficulty; x++) {
+        for (int y = 0; y < difficulty; y++) {
+            SDL_FRect rect = {
+                    x * cellWidth,
+                    y * cellHeight,
+                    cellWidth + 1,  // Ajout de 1 pixel pour éviter les espaces
+                    cellHeight + 1
+            };
+
             if (map.map[y][x] == WALL) {
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
                 SDL_RenderFillRect(renderer, &rect);
@@ -157,11 +195,12 @@ void printMap(SDL_Renderer *renderer) {
     }
 }
 
-void initGame() {
-    GenerateMaze();
-    setCarac(0);
-    setCarac(1);
-    solveMaze();
+void initGame(int difficulty) {
+    GenerateMaze(difficulty);
+    setCarac(0, difficulty);
+    setCarac(1, difficulty);
+}
+
 //    Stack sta = new_stack();
 //    Case start = {getCaracX(),getCaracY(),'s'};
 //    sta = push_stack(sta,start,&map);
@@ -170,13 +209,13 @@ void initGame() {
 //    print_stack(stack);
 //    free_stack(&stack);
 //    free_stack(&sta);
-}
+
 
 
 
 /*----------------------------------------------------------------------------------------*/
 
-/*-----------------------------------------SOLVEUR-----------------------------------------------*/
+/*-----------------------------------------SOLVEUR with help-----------------------------------------------*/
 
 /*----------------------------------------------------------------------------------------*/
 #define MAX_QUEUE_SIZE (WIDTH * HEIGHT)
@@ -188,10 +227,10 @@ typedef struct {
 
 Point directions[] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
-void solveMaze() {
+void solveMaze(int difficulty) {
     terrain *map = returnMap();
-    int startX = getCaracX();
-    int startY = getCaracY();
+    int startX = getCaracX(difficulty);
+    int startY = getCaracY(difficulty);
 
     Node queue[MAX_QUEUE_SIZE];
     int visited[HEIGHT][WIDTH] = {0};
@@ -258,15 +297,12 @@ void solveMaze() {
 
 
 
+/*----------------------------------------------------------------------------------------*/
 
+/*-----------------------------------------my own SOLVEUR (do not work with the random wall generation)-----------------------------------------------*/
 
+/*----------------------------------------------------------------------------------------*/
 
-
-
-
-
-
-//
 //Stack new_stack(void) {
 //    return NULL;
 //}

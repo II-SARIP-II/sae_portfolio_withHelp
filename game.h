@@ -6,8 +6,8 @@
 
 #define WIDTH 10
 #define HEIGHT 10
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 800
+#define WINDOW_WIDTH 1000
+#define WINDOW_HEIGHT 1000
 
 // Définition des types de terrain
 #define WALL 1
@@ -18,8 +18,9 @@
 
 // Structure de la carte
 typedef struct {
-    char map[HEIGHT][WIDTH];
+    char **map; // Tableau 2D dynamique
 } terrain;
+
 
 // Structure pour les positions
 typedef struct {
@@ -27,16 +28,18 @@ typedef struct {
 } Point;
 
 // Fonctions de génération et manipulation du labyrinthe
-void GenerateMaze();
+void GenerateMaze(int difficulty);
 terrain* returnMap();
-void setCarac(int type);
-int getCaracX();
-int getCaracY();
-int moveCarac(int x, int y, char action);
-void printMap(SDL_Renderer *renderer);
-void initGame();
+void setCarac(int type,int difficulty);
+int getCaracX(int difficulty);
+int getCaracY(int difficulty);
+int moveCarac(int x, int y, char action, int difficulty);
+void printMap(SDL_Renderer *renderer, int difficulty);
+void initGame(int difficulty);
+void freeMap(int difficulty);
 
-void solveMaze();
+
+void solveMaze(int difficulty);
 
 
 

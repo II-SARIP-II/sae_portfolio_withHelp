@@ -13,9 +13,6 @@ find_package(SDL3 REQUIRED)
 # Créer l'exécutable
 add_executable(MySDL3Project main.c
         game.c
-        solveur.h
-        solveur.c
-        solveur.h
         game.h)
 
 # Lier SDL3 à ton projet

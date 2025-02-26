@@ -28,23 +28,79 @@ int main() {
         return 1;
     }
 
-    int running = 0;
-    SDL_Event event;
-    int result = 0;
-    initGame();
+    // Charger une image de texte (crée une image de texte avant dans ton projet)
+    SDL_Surface* surfaceMessage = SDL_LoadBMP("textLevel.bmp");  // Image pré-générée
+    if (!surfaceMessage) {
+        printf("Erreur de chargement de l'image de texte: %s\n", SDL_GetError());
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
 
-    while (running != 1) {
+    SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+
+    SDL_Event event;
+    int running = 1;
+    int difficulty = 0;
+
+    // Écran de sélection de difficulté
+    while (running) {
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+        SDL_RenderTexture(renderer, Message, NULL, NULL);  // Afficher la texture de texte
+        SDL_RenderPresent(renderer);
 
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) {
-                running = 1;
+                running = 0;
+                break;
             } else if (event.type == SDL_EVENT_KEY_DOWN) {
-                int x = getCaracX();
-                int y = getCaracY();
-                if (event.key.scancode == SDL_SCANCODE_UP) result = moveCarac(x, y, 'z');
-                if (event.key.scancode == SDL_SCANCODE_DOWN) result = moveCarac(x, y, 's');
-                if (event.key.scancode == SDL_SCANCODE_LEFT) result = moveCarac(x, y, 'q');
-                if (event.key.scancode == SDL_SCANCODE_RIGHT) result = moveCarac(x, y, 'd');
+                if (event.key.scancode == SDL_SCANCODE_1 ) {
+                    difficulty = 10;
+                    running = 0;
+                    break;
+                } else if (event.key.scancode == SDL_SCANCODE_2) {
+                    difficulty = 20;
+                    running = 0;
+                    break;
+                } else if (event.key.scancode == SDL_SCANCODE_3 ) {
+                    difficulty = 35;
+                    running = 0;
+                    break;
+                } else if (event.key.scancode == SDL_SCANCODE_4 ) {
+                    difficulty = 50;
+                    running = 0;
+                    break;
+                } else if (event.key.scancode == SDL_SCANCODE_5 ) {
+                    difficulty = 100;
+                    running = 0;
+                    break;
+                }
+            }
+        }
+    }
+
+    printf("%d ---------------------\n", difficulty);
+
+
+
+    int gameRunning = 1;
+    int result = 0;
+    initGame(difficulty);
+
+    while (gameRunning) {
+
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_EVENT_QUIT) {
+                gameRunning = 0;
+            } else if (event.type == SDL_EVENT_KEY_DOWN) {
+                int x = getCaracX(difficulty);
+                int y = getCaracY(difficulty);
+                if (event.key.scancode == SDL_SCANCODE_UP) result = moveCarac(x, y, 'z', difficulty);
+                if (event.key.scancode == SDL_SCANCODE_DOWN) result = moveCarac(x, y, 's', difficulty);
+                if (event.key.scancode == SDL_SCANCODE_LEFT) result = moveCarac(x, y, 'q', difficulty);
+                if (event.key.scancode == SDL_SCANCODE_RIGHT) result = moveCarac(x, y, 'd', difficulty);
             }
 
         }
@@ -56,6 +112,7 @@ int main() {
                 SDL_DestroyRenderer(renderer);
                 SDL_DestroyWindow(window);
                 SDL_Quit();
+                freeMap(difficulty);
                 return 1;
             }
 
@@ -66,25 +123,26 @@ int main() {
                 SDL_DestroyRenderer(renderer);
                 SDL_DestroyWindow(window);
                 SDL_Quit();
+                freeMap(difficulty);
                 return 1;
             }
 
             SDL_RenderClear(renderer);
             SDL_RenderTexture(renderer, texture, NULL, NULL);
             SDL_RenderPresent(renderer);
-
             SDL_Delay(4000);
             SDL_DestroyRenderer(renderer);
             SDL_DestroyWindow(window);
             SDL_Quit();
-
+            freeMap(difficulty);
             return 0;
         }
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderClear(renderer);
-        printMap(renderer);
+        printMap(renderer, difficulty);
         SDL_RenderPresent(renderer);
     }
+    freeMap(difficulty);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
